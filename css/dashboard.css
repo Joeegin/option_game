@@ -144,20 +144,254 @@
   min-height: 0;
 }
 
-/* Chart area — lower, compact */
-.chart-container {
-  flex: 4;
-  position: relative;
+/* Chart area — tabbed lower section (price chart / payoff) */
+.chart-area {
+  flex: 5;
+  display: flex;
+  flex-direction: column;
   background: var(--bg-primary);
-  min-height: 150px;
+  min-height: 200px;
+  border-top: 1px solid var(--border-color);
 }
 
-.chart-container canvas {
+.chart-tabs {
+  display: flex;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.chart-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  padding: 8px 18px;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.chart-tab:hover {
+  color: var(--text-primary);
+  background: rgba(68, 138, 255, 0.05);
+}
+
+.chart-tab.active {
+  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+  background: rgba(68, 138, 255, 0.08);
+}
+
+.chart-pane {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-pane[hidden] {
+  display: none !important;
+}
+
+.chart-pane-price canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+}
+
+.chart-pane-payoff {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Payoff toolbar with legend + help trigger */
+.payoff-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 11px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.payoff-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.lg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.lg-line {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  border-top: 2px solid;
+}
+
+.lg-line.lg-expiry { border-color: #448aff; }
+.lg-line.lg-now {
+  border-top-style: dashed;
+  border-color: #8b8fa3;
+}
+
+.lg-tick {
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  border-left: 2px dashed;
+  vertical-align: middle;
+}
+
+.lg-tick.lg-be { border-color: #ffd740; }
+.lg-tick.lg-price { border-color: #448aff; }
+
+/* Help trigger + tooltip */
+.payoff-help-trigger {
+  position: relative;
+  cursor: help;
+  color: var(--accent-blue);
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(68, 138, 255, 0.3);
+  background: rgba(68, 138, 255, 0.08);
+  outline: none;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.payoff-help-trigger:hover,
+.payoff-help-trigger:focus-within,
+.payoff-help-trigger:focus {
+  background: rgba(68, 138, 255, 0.2);
+}
+
+.payoff-help-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 400px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  font-weight: normal;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  text-align: left;
+}
+
+.payoff-help-trigger:hover .payoff-help-tooltip,
+.payoff-help-trigger:focus-within .payoff-help-tooltip,
+.payoff-help-trigger:focus .payoff-help-tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.ht-section {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ht-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.ht-title {
+  color: var(--accent-blue);
+  font-weight: bold;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.ht-section div {
+  margin-bottom: 3px;
+}
+
+.ht-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.ht-swatch.lg-expiry { background: #448aff; }
+.ht-swatch.lg-now {
+  background: transparent;
+  border-top: 2px dashed #8b8fa3;
+  height: 0;
+}
+.ht-swatch.lg-be {
+  background: transparent;
+  border-left: 2px dashed #ffd740;
+  width: 2px;
+  height: 14px;
+}
+.ht-swatch.lg-price {
+  background: transparent;
+  border-left: 2px dashed #448aff;
+  width: 2px;
+  height: 14px;
+}
+
+/* Payoff SVG mount */
+.payoff-mount {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.payoff-mount .payoff-svg {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+
+.payoff-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 40px;
+}
+
+/* Hint inside knowledge panel */
+.kp-hint {
+  background: rgba(255, 215, 64, 0.08);
+  border-left: 3px solid var(--accent-yellow);
+  padding: 8px 12px;
+  border-radius: 0 6px 6px 0;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .objective-badge {

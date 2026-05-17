@@ -284,27 +284,6 @@
   font-size: 12px;
 }
 
-/* Payoff diagram section */
-.payoff-section {
-  margin: 10px 0;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 8px;
-  background: rgba(15, 17, 23, 0.4);
-}
-
-.payoff-title {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.payoff-svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
 /* Win progress checklist */
 .win-progress {
   background: rgba(0, 200, 83, 0.06);
