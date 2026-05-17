@@ -1,0 +1,175 @@
+name: Auto Labeler
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply labels based on title prefix / issue keywords
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // ── Label definitions ────────────────────────────────────────────
+            // GitHub label colors are 6-digit hex without leading '#'.
+            const LABEL_META = {
+              // PR title prefix → label
+              'type: bug':           { color: 'd73a4a', description: 'Bug fix' },
+              'type: feature':       { color: '0e8a16', description: 'New feature' },
+              'type: refactor':      { color: '0075ca', description: 'Code refactoring' },
+              'type: style':         { color: 'c5def5', description: 'Code style or UI styling' },
+              'type: docs':          { color: '7057ff', description: 'Documentation' },
+              'type: chore':         { color: 'cfd3d7', description: 'Maintenance / housekeeping' },
+              'type: test':          { color: 'fbca04', description: 'Test additions or fixes' },
+              'type: performance':   { color: 'ff9800', description: 'Performance improvement' },
+              'type: ci':            { color: '1d76db', description: 'CI / workflow changes' },
+              'type: build':         { color: '5319e7', description: 'Build system / dependencies' },
+              'type: revert':        { color: 'e99695', description: 'Reverts a previous change' },
+              // Issue keyword → label (GitHub default-style)
+              'bug':                 { color: 'd73a4a', description: 'Something is not working' },
+              'enhancement':         { color: 'a2eeef', description: 'New feature or improvement request' },
+              'question':            { color: 'd876e3', description: 'Further information is requested' },
+              'documentation':       { color: '0075ca', description: 'Improvements or additions to documentation' },
+              'help wanted':         { color: '008672', description: 'Extra attention is needed' },
+            };
+
+            // PR title prefix ([xxx]) → label name
+            const PR_PREFIX_MAP = {
+              'fix':         'type: bug',
+              'bugfix':      'type: bug',
+              'feat':        'type: feature',
+              'feature':     'type: feature',
+              'refactor':    'type: refactor',
+              'style':       'type: style',
+              'docs':        'type: docs',
+              'doc':         'type: docs',
+              'chore':       'type: chore',
+              'test':        'type: test',
+              'tests':       'type: test',
+              'perf':        'type: performance',
+              'performance': 'type: performance',
+              'ci':          'type: ci',
+              'build':       'type: build',
+              'deps':        'type: build',
+              'revert':      'type: revert',
+            };
+
+            // Issue keyword groups → label name. First-match wins per group.
+            // Patterns are case-insensitive substrings (no regex anchors required).
+            const ISSUE_KEYWORDS = [
+              {
+                label: 'bug',
+                patterns: ['bug', 'error', 'broken', 'crash', 'fail', 'not work', "doesn't work", "doesnt work", '不工作', '异常', '报错', '崩溃'],
+              },
+              {
+                label: 'enhancement',
+                patterns: ['feature request', 'enhancement', 'feature', 'add support', 'please add', 'suggestion', 'improve', '建议', '新增', '增加', '改进'],
+              },
+              {
+                label: 'question',
+                patterns: ['question', 'how to', 'how do', 'how can', 'why does', 'why is', '怎么', '如何', '为什么'],
+              },
+              {
+                label: 'documentation',
+                patterns: ['docs', 'documentation', 'readme', '文档', '说明'],
+              },
+              {
+                label: 'help wanted',
+                patterns: ['help wanted', 'need help', 'please help', '求助', '帮忙'],
+              },
+            ];
+
+            // ── Helpers ──────────────────────────────────────────────────────
+            async function ensureLabel(name) {
+              const meta = LABEL_META[name];
+              if (!meta) return; // unknown label, skip creation safety
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name,
+                });
+              } catch (e) {
+                if (e.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name,
+                    color: meta.color,
+                    description: meta.description,
+                  });
+                  core.info(`Created label: ${name}`);
+                } else {
+                  throw e;
+                }
+              }
+            }
+
+            async function addLabels(number, labels) {
+              if (labels.length === 0) return;
+              for (const l of labels) await ensureLabel(l);
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                labels,
+              });
+              core.info(`Added labels to #${number}: ${labels.join(', ')}`);
+            }
+
+            function parsePrefixes(title) {
+              // Match all leading [xxx] tags, e.g. "[feat][api] foo" → ['feat','api']
+              const out = [];
+              const re = /^\s*\[([^\]]+)\]/;
+              let rest = title || '';
+              let m;
+              while ((m = rest.match(re))) {
+                out.push(m[1].trim().toLowerCase());
+                rest = rest.slice(m[0].length);
+              }
+              return out;
+            }
+
+            function matchIssueKeywords(text) {
+              const lower = (text || '').toLowerCase();
+              const matched = new Set();
+              for (const group of ISSUE_KEYWORDS) {
+                for (const p of group.patterns) {
+                  if (lower.includes(p.toLowerCase())) {
+                    matched.add(group.label);
+                    break;
+                  }
+                }
+              }
+              return [...matched];
+            }
+
+            // ── Main ─────────────────────────────────────────────────────────
+            if (context.eventName === 'pull_request_target') {
+              const pr = context.payload.pull_request;
+              const prefixes = parsePrefixes(pr.title);
+              const labels = [...new Set(prefixes.map(p => PR_PREFIX_MAP[p]).filter(Boolean))];
+              if (labels.length === 0) {
+                core.info(`No recognized prefix in PR title: "${pr.title}"`);
+                return;
+              }
+              await addLabels(pr.number, labels);
+            } else if (context.eventName === 'issues') {
+              const issue = context.payload.issue;
+              const haystack = `${issue.title}\n${issue.body || ''}`;
+              const labels = matchIssueKeywords(haystack);
+              if (labels.length === 0) {
+                core.info(`No keyword match for issue #${issue.number}`);
+                return;
+              }
+              await addLabels(issue.number, labels);
+            }
