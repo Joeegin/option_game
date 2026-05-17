@@ -107,9 +107,21 @@ class Game {
     return this.completedLevels.has(levelId);
   }
 
-  /** Is a level unlocked? */
+  /** Is a level unlocked? Level 1 requires onboarding completion. */
   isUnlocked(levelId) {
+    if (levelId === 1 && typeof Onboarding !== 'undefined' && !Onboarding.isCompleted()) {
+      return false;
+    }
     return levelId <= this.unlockedLevel;
+  }
+
+  /** All levels grouped by phase, for the level-select screen. */
+  getLevelsByPhase() {
+    if (typeof PHASES === 'undefined') return [{ id: 0, title: '关卡', desc: '', levels: LEVEL_DEFINITIONS }];
+    return PHASES.map(phase => ({
+      ...phase,
+      levels: LEVEL_DEFINITIONS.filter(l => phase.levels.includes(l.id)),
+    }));
   }
 
   /** Get progress summary */

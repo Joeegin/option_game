@@ -24,6 +24,34 @@ class App {
     this.ui.onTrade = (tradeConfig) => this._executeTrade(tradeConfig);
     this.ui.onClosePosition = (positionId) => this._closePosition(positionId);
     this.ui.onResetGame = () => this._resetGame();
+    this.ui.onSkipOnboarding = () => this._showLevelSelect();
+    this.ui.onFinishOnboarding = () => this._startLevel(1);
+    this.ui.onRedrawChart = () => {
+      // Defer one tick to let CSS finish revealing the pane
+      setTimeout(() => this._updateChart(), 30);
+    };
+  }
+
+  _setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // Ignore when typing in inputs
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'Escape') {
+        this.ui.closeActiveModal();
+        return;
+      }
+
+      if (this.game.getState() !== 'playing') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        this._advanceDay();
+      } else if (e.key >= '1' && e.key <= '9') {
+        const input = document.getElementById('trade-qty');
+        if (input) input.value = e.key;
+      }
+    });
   }
 
   _setupKeyboardShortcuts() {
@@ -50,7 +78,12 @@ class App {
 
   _showLevelSelect() {
     this.game.resetLevel();
-    this.ui.renderLevelSelect(LEVEL_DEFINITIONS, this.game);
+    // First-time visitors auto-enter onboarding; returning visitors see level list
+    if (typeof Onboarding !== 'undefined' && !Onboarding.isCompleted() && this.game.getProgress().completed === 0) {
+      this.ui.renderOnboarding(0);
+    } else {
+      this.ui.renderLevelSelect(LEVEL_DEFINITIONS, this.game);
+    }
   }
 
   _startLevel(levelId) {
