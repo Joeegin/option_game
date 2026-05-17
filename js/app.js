@@ -12,6 +12,7 @@ class App {
     this.tradeMarkers = [];
 
     this._setupUICallbacks();
+    this._setupKeyboardShortcuts();
     this._showLevelSelect();
   }
 
@@ -19,9 +20,32 @@ class App {
     this.ui.onSelectLevel = (levelId) => this._startLevel(levelId);
     this.ui.onStartLevel = () => this._activateTrading();
     this.ui.onAdvanceDay = () => this._advanceDay();
+    this.ui.onAdvanceDays = (n) => this._advanceDays(n);
     this.ui.onTrade = (tradeConfig) => this._executeTrade(tradeConfig);
     this.ui.onClosePosition = (positionId) => this._closePosition(positionId);
     this.ui.onResetGame = () => this._resetGame();
+  }
+
+  _setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // Ignore when typing in inputs
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'Escape') {
+        this.ui.closeActiveModal();
+        return;
+      }
+
+      if (this.game.getState() !== 'playing') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        this._advanceDay();
+      } else if (e.key >= '1' && e.key <= '9') {
+        const input = document.getElementById('trade-qty');
+        if (input) input.value = e.key;
+      }
+    });
   }
 
   _showLevelSelect() {
@@ -39,9 +63,7 @@ class App {
 
   _beginPlaying() {
     const level = this.game.currentLevel;
-    // Don't start game yet — user reads tutorial first
 
-    // Initialize market
     this.market = new Market({
       initialPrice: level.initialPrice,
       volatility: level.volatility,
@@ -50,28 +72,20 @@ class App {
       riskFreeRate: 0.03,
     });
 
-    // Initialize portfolio
     this.portfolio = new Portfolio(level.initialCash);
     this.tradeMarkers = [];
 
-    // Render game with tutorial in middle area
     this.ui.renderGame(level, this.market, this.portfolio, this.game);
 
-    // Initialize chart immediately (shows starting price while user reads)
     setTimeout(() => {
       this.chart = new PriceChart('price-chart');
       this._updateChart();
     }, 150);
   }
 
-  /** Called when user clicks "开始交易" after reading tutorial */
   _activateTrading() {
     this.game.startPlaying();
-
-    // Update knowledge panel to show strategy guide
     this.ui.updateDashboard(this.game.currentLevel, this.market, this.portfolio, this.game);
-
-    // Redraw chart (may need resize after layout change)
     setTimeout(() => this._updateChart(), 50);
   }
 
@@ -84,25 +98,18 @@ class App {
     const level = this.game.currentLevel;
     const { type, isLong, strike, quantity, isStock } = tradeConfig;
 
-    // Check if action is allowed
-    if (!isStock) {
-      const actionKey = `${isLong ? 'buy' : 'sell'}_${type}`;
-      if (!level.allowedActions.includes(actionKey)) {
-        this.ui.showToast('此关卡不允许该操作', 'error');
-        return;
-      }
-    } else {
-      const actionKey = `${isLong ? 'buy' : 'sell'}_stock`;
-      if (!level.allowedActions.includes(actionKey)) {
-        this.ui.showToast('此关卡不允许该操作', 'error');
-        return;
-      }
+    const actionKey = isStock
+      ? (isLong ? 'buy_stock' : 'sell_stock')
+      : `${isLong ? 'buy' : 'sell'}_${type}`;
+    if (!level.allowedActions.includes(actionKey)) {
+      this.ui.showToast('此关卡不允许该操作', 'error');
+      return;
     }
 
-    // Get premium
     let premium;
     if (isStock) {
-      premium = this.market.getCurrentPrice();
+      const q = this.market.getStockQuote();
+      premium = isLong ? q.ask : q.bid;
     } else {
       const price = this.market.getOptionPrice(type, strike);
       premium = isLong ? price.ask : price.bid;
@@ -116,18 +123,21 @@ class App {
       openPrice: this.market.getCurrentPrice(),
     };
 
-    const result = this.portfolio.openPosition(option, quantity, premium, isStock);
+    const result = this.portfolio.openPosition(
+      option, quantity, premium, isStock, this.market.getCurrentPrice()
+    );
     if (!result.success) {
       this.ui.showToast(result.error, 'error');
       return;
     }
 
-    // Record trade marker
     this.tradeMarkers.push({
       day: this.market.getDay(),
       price: this.market.getCurrentPrice(),
       type: isLong ? 'buy' : 'sell',
-      label: isStock ? (isLong ? 'Buy Stock' : 'Sell Stock') : `${isLong ? 'Buy' : 'Sell'} ${type.toUpperCase()} $${strike}`,
+      label: isStock
+        ? (isLong ? 'Buy Stock' : 'Sell Stock')
+        : `${isLong ? 'Buy' : 'Sell'} ${type.toUpperCase()} $${strike}`,
     });
 
     const actionLabel = isStock
@@ -147,7 +157,8 @@ class App {
 
     let currentPremium;
     if (pos.isStock) {
-      currentPremium = this.market.getCurrentPrice();
+      const q = this.market.getStockQuote();
+      currentPremium = pos.isLong ? q.bid : q.ask;
     } else {
       const price = this.market.getOptionPrice(pos.optionType, pos.strike);
       currentPremium = pos.isLong ? price.bid : price.ask;
@@ -180,13 +191,24 @@ class App {
     const newPrice = this.market.advanceDay();
     if (newPrice === null) {
       this.ui.showToast('已是最后一天', 'info');
+      this._checkGameEnd();
       return;
     }
 
     this.ui.updateDashboard(this.game.currentLevel, this.market, this.portfolio, this.game);
     this._updateChart();
+    this._checkGameEnd();
+  }
 
-    // Auto-check conditions
+  _advanceDays(n) {
+    if (this.game.getState() !== 'playing') return;
+    const remaining = this.market.getDaysRemaining();
+    const steps = Math.min(n, remaining);
+    for (let i = 0; i < steps; i++) {
+      if (this.market.advanceDay() === null) break;
+    }
+    this.ui.updateDashboard(this.game.currentLevel, this.market, this.portfolio, this.game);
+    this._updateChart();
     this._checkGameEnd();
   }
 
@@ -204,10 +226,10 @@ class App {
 
     if (result === 'won' || result === 'lost') {
       const level = this.game.currentLevel;
+      const extra = result === 'lost' ? { suggestion: this._buildLossSuggestion(level, pnl) } : null;
       this.ui.showResult(
         result, level, pnl,
         () => {
-          // Next level
           if (level.id < LEVEL_DEFINITIONS.length) {
             this._startLevel(level.id + 1);
           } else {
@@ -215,21 +237,48 @@ class App {
           }
         },
         () => {
-          // Retry
           this.game.resetLevel();
           this._beginPlaying();
         },
-        () => {
-          // Back to list
-          this._showLevelSelect();
-        }
+        () => this._showLevelSelect(),
+        extra
       );
     }
   }
 
+  _buildLossSuggestion(level, pnl) {
+    const stats = this.market.getStats();
+    const trend = stats.changePct;
+    const summary = this.portfolio.getPositionSummary();
+    const tips = [];
+
+    if (level.id === 1 && trend > 0 && summary.longCalls === 0) {
+      tips.push('💡 股价上涨了，但你没有买 Call。下次尝试在前几天买入 ATM 或略 OTM Call。');
+    } else if (level.id === 2 && trend < 0 && summary.longPuts === 0) {
+      tips.push('💡 股价下跌了，但你没有买 Put。这正是 Put 的用武之地。');
+    } else if (level.id === 4 && summary.shortCalls === 0) {
+      tips.push('💡 Covered Call 需要持股 + 卖出 Call。光持股没有用上权利金收入。');
+    } else if (level.id === 5 && summary.longPuts === 0) {
+      tips.push('💡 Protective Put 关键在"保护"——必须买入 Put 才能限制下行。');
+    } else if (level.id === 8) {
+      tips.push('💡 Straddle 需要足够波动才能盈利。如果股价没动，两份权利金会一起亏损。');
+    }
+
+    if (Math.abs(pnl) < 30) {
+      tips.push('当前盈亏接近零——可能进场太晚或仓位太小，尝试早点建仓。');
+    }
+    if (trend > 5 && summary.longPuts > 0) {
+      tips.push('股价上涨 ' + trend.toFixed(1) + '%，但你持有 Put（看跌），方向反了。');
+    }
+    if (trend < -5 && summary.longCalls > 0) {
+      tips.push('股价下跌 ' + trend.toFixed(1) + '%，但你持有 Call（看涨），方向反了。');
+    }
+
+    return tips.length ? tips.map(t => `<div>${t}</div>`).join('') : '建议：重新阅读教程，思考策略与市场走势的匹配。';
+  }
+
   _updateChart() {
     if (!this.chart || !this.market) return;
-    // Ensure canvas is sized before drawing
     if (this.chart.canvas.width === 0 || this.chart.canvas.height === 0) {
       this.chart._resize();
     }
@@ -242,9 +291,9 @@ class App {
   }
 }
 
-// Boot the app
 let app;
 document.addEventListener('DOMContentLoaded', () => {
   app = new App();
-  window.ui = app.ui; // expose for onclick handlers
+  window.app = app;
+  window.ui = app.ui;
 });
