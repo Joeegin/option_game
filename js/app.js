@@ -24,6 +24,8 @@ class App {
     this.ui.onTrade = (tradeConfig) => this._executeTrade(tradeConfig);
     this.ui.onClosePosition = (positionId) => this._closePosition(positionId);
     this.ui.onResetGame = () => this._resetGame();
+    this.ui.onSkipOnboarding = () => this._showLevelSelect();
+    this.ui.onFinishOnboarding = () => this._startLevel(1);
   }
 
   _setupKeyboardShortcuts() {
@@ -50,7 +52,12 @@ class App {
 
   _showLevelSelect() {
     this.game.resetLevel();
-    this.ui.renderLevelSelect(LEVEL_DEFINITIONS, this.game);
+    // First-time visitors auto-enter onboarding; returning visitors see level list
+    if (typeof Onboarding !== 'undefined' && !Onboarding.isCompleted() && this.game.getProgress().completed === 0) {
+      this.ui.renderOnboarding(0);
+    } else {
+      this.ui.renderLevelSelect(LEVEL_DEFINITIONS, this.game);
+    }
   }
 
   _startLevel(levelId) {
