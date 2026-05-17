@@ -54,6 +54,28 @@ class App {
     });
   }
 
+  _setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // Ignore when typing in inputs
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'Escape') {
+        this.ui.closeActiveModal();
+        return;
+      }
+
+      if (this.game.getState() !== 'playing') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        this._advanceDay();
+      } else if (e.key >= '1' && e.key <= '9') {
+        const input = document.getElementById('trade-qty');
+        if (input) input.value = e.key;
+      }
+    });
+  }
+
   _showLevelSelect() {
     this.game.resetLevel();
     // First-time visitors auto-enter onboarding; returning visitors see level list
