@@ -25,6 +25,11 @@ body {
   color: var(--text-primary);
   height: 100vh;
   overflow: hidden;
+}
+
+/* Disable text selection on interactive chrome, but keep tutorials selectable */
+button, .options-chain td, .level-card, .top-bar, .trade-panel,
+.kp-header, .panel-header, canvas {
   user-select: none;
 }
 
@@ -170,4 +175,12 @@ input:focus, select:focus {
 
 .fade-in {
   animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeOut {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+.fade-out {
+  animation: fadeOut 0.3s ease forwards;
 }

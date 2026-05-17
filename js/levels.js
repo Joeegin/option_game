@@ -72,6 +72,12 @@ const LEVEL_DEFINITIONS = [
     allowedActions: ['buy_call'],
     winCondition: (pnl) => pnl > 100,
     winText: '盈利超过 $100',
+    difficulty: 1,
+    tags: ['Long Call', '方向交易'],
+    checklist: [
+      { label: '至少买入一份 Call', check: (c) => c.portfolio.getPositionSummary().longCalls > 0 },
+      { label: '总盈亏 > $100', check: (c) => c.pnl > 100 },
+    ],
   },
 
   // ────────────────────────────────────────────
@@ -132,6 +138,12 @@ const LEVEL_DEFINITIONS = [
     allowedActions: ['buy_put'],
     winCondition: (pnl) => pnl > 100,
     winText: '盈利超过 $100',
+    difficulty: 1,
+    tags: ['Long Put', '方向交易'],
+    checklist: [
+      { label: '至少买入一份 Put', check: (c) => c.portfolio.getPositionSummary().longPuts > 0 },
+      { label: '总盈亏 > $100', check: (c) => c.pnl > 100 },
+    ],
   },
 
   // ────────────────────────────────────────────
@@ -176,16 +188,38 @@ const LEVEL_DEFINITIONS = [
     `,
     knowledgePanel: `
       <h4>当前策略：灵活买卖 Call 和 Put</h4>
-      <p>你可以<strong>买入 Call</strong> 和 <strong>买入 Put</strong>。</p>
+      <p>你可以<strong>买入 Call</strong> 和 <strong>买入 Put</strong>。下方为当前 ATM 期权的实时 Greeks 数据：</p>
       <div class="highlight-box">
-        <strong>关键观察：</strong><br>
-        每天推进后观察期权价格变化——<br>
-        即使股价不变，<strong style="color: var(--accent-red);">时间衰减 (Theta)</strong> 也会让期权贬值。
+        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+          <tr style="color: var(--text-muted);">
+            <td style="padding: 3px 8px;"></td>
+            <td style="padding: 3px 8px; text-align: center;">Delta δ</td>
+            <td style="padding: 3px 8px; text-align: center;">Gamma γ</td>
+            <td style="padding: 3px 8px; text-align: center;">Theta θ</td>
+            <td style="padding: 3px 8px; text-align: center;">Vega ν</td>
+          </tr>
+          <tr>
+            <td style="padding: 3px 8px; color: var(--accent-green); font-weight: bold;">ATM Call</td>
+            <td style="padding: 3px 8px; text-align: center; color: var(--text-primary);">{CALL_DELTA}</td>
+            <td style="padding: 3px 8px; text-align: center; color: var(--text-primary);">{CALL_GAMMA}</td>
+            <td style="padding: 3px 8px; text-align: center; color: var(--accent-red);">{CALL_THETA}</td>
+            <td style="padding: 3px 8px; text-align: center; color: var(--text-primary);">{CALL_VEGA}</td>
+          </tr>
+          <tr>
+            <td style="padding: 3px 8px; color: var(--accent-red); font-weight: bold;">ATM Put</td>
+            <td style="padding: 3px 8px; text-align: center; color: var(--text-primary);">{PUT_DELTA}</td>
+            <td style="padding: 3px 8px; text-align: center; color: var(--text-primary);">{PUT_GAMMA}</td>
+            <td style="padding: 3px 8px; text-align: center; color: var(--accent-red);">{PUT_THETA}</td>
+            <td style="padding: 3px 8px; text-align: center; color: var(--text-primary);">{PUT_VEGA}</td>
+          </tr>
+        </table>
       </div>
       <ul>
         <li>标的价格 <strong>{S}</strong>，剩余 <strong>{T}</strong> 天，波动率 <strong>{SIGMA}</strong></li>
         <li>ATM Call <strong style="color: var(--accent-green);">{ATM_CALL}</strong> | ATM Put <strong style="color: var(--accent-red);">{ATM_PUT}</strong></li>
-        <li>留意深度价内/价外期权的价格差异——这体现了<strong>内在价值 vs 时间价值</strong></li>
+        <li><strong>Delta</strong>：股价每涨 $1，Call 涨 Delta 美元；Put 跌 |Delta| 美元</li>
+        <li><strong>Theta</strong>（红色）：每天时间衰减的金额，对买方不利</li>
+        <li>推进天数观察 Theta 如何侵蚀期权价格！</li>
       </ul>
     `,
     initialCash: 10000,
@@ -196,6 +230,11 @@ const LEVEL_DEFINITIONS = [
     allowedActions: ['buy_call', 'buy_put'],
     winCondition: (pnl) => pnl > 200,
     winText: '盈利超过 $200',
+    difficulty: 2,
+    tags: ['Greeks', 'Delta/Theta'],
+    checklist: [
+      { label: '总盈亏 > $200', check: (c) => c.pnl > 200 },
+    ],
   },
 
   // ────────────────────────────────────────────
@@ -256,9 +295,16 @@ const LEVEL_DEFINITIONS = [
     volatility: 0.25,
     totalDays: 30,
     drift: 0.03,
-    allowedActions: ['buy_stock', 'sell_stock', 'sell_call'],
+    allowedActions: ['buy_stock', 'sell_stock', 'buy_call', 'sell_call'],
     winCondition: (pnl) => pnl > 300,
     winText: '盈利超过 $300',
+    difficulty: 2,
+    tags: ['Covered Call', '收入策略'],
+    checklist: [
+      { label: '持有股票', check: (c) => c.portfolio.getPositionSummary().longStock > 0 },
+      { label: '卖出 Call', check: (c) => c.portfolio.getPositionSummary().shortCalls > 0 },
+      { label: '总盈亏 > $300', check: (c) => c.pnl > 300 },
+    ],
   },
 
   // ────────────────────────────────────────────
@@ -328,7 +374,15 @@ const LEVEL_DEFINITIONS = [
       const summary = portfolio.getPositionSummary();
       return day > 5 && pnl > -50 && summary.longStock > 0 && summary.longPuts > 0;
     },
-    winText: '持有股票+Put，且亏损不超过 $50',
+    winText: '6 日后仍持有股票+Put，且亏损不超过 $50',
+    difficulty: 3,
+    tags: ['Protective Put', '对冲'],
+    checklist: [
+      { label: '持有股票', check: (c) => c.portfolio.getPositionSummary().longStock > 0 },
+      { label: '持有 Put 保护', check: (c) => c.portfolio.getPositionSummary().longPuts > 0 },
+      { label: '已过第 6 天', check: (c) => c.day > 5 },
+      { label: '亏损 ≤ $50', check: (c) => c.pnl > -50 },
+    ],
   },
 
   // ────────────────────────────────────────────
@@ -390,6 +444,13 @@ const LEVEL_DEFINITIONS = [
     allowedActions: ['buy_call', 'sell_call'],
     winCondition: (pnl) => pnl > 400,
     winText: '盈利超过 $400',
+    difficulty: 3,
+    tags: ['Bull Call Spread', '价差'],
+    checklist: [
+      { label: '买入低行权 Call', check: (c) => c.portfolio.getPositionSummary().longCalls > 0 },
+      { label: '卖出高行权 Call', check: (c) => c.portfolio.getPositionSummary().shortCalls > 0 },
+      { label: '总盈亏 > $400', check: (c) => c.pnl > 400 },
+    ],
   },
 
   // ────────────────────────────────────────────
@@ -451,6 +512,13 @@ const LEVEL_DEFINITIONS = [
     allowedActions: ['buy_put', 'sell_put'],
     winCondition: (pnl) => pnl > 400,
     winText: '盈利超过 $400',
+    difficulty: 3,
+    tags: ['Bear Put Spread', '价差'],
+    checklist: [
+      { label: '买入高行权 Put', check: (c) => c.portfolio.getPositionSummary().longPuts > 0 },
+      { label: '卖出低行权 Put', check: (c) => c.portfolio.getPositionSummary().shortPuts > 0 },
+      { label: '总盈亏 > $400', check: (c) => c.pnl > 400 },
+    ],
   },
 
   // ────────────────────────────────────────────
@@ -519,6 +587,13 @@ const LEVEL_DEFINITIONS = [
     allowedActions: ['buy_call', 'buy_put', 'sell_call', 'sell_put'],
     winCondition: (pnl) => pnl > 500,
     winText: '盈利超过 $500',
+    difficulty: 4,
+    tags: ['Straddle', '波动率'],
+    checklist: [
+      { label: '买入 Call', check: (c) => c.portfolio.getPositionSummary().longCalls > 0 },
+      { label: '买入 Put', check: (c) => c.portfolio.getPositionSummary().longPuts > 0 },
+      { label: '总盈亏 > $500', check: (c) => c.pnl > 500 },
+    ],
   },
 
   // ────────────────────────────────────────────
@@ -583,6 +658,15 @@ const LEVEL_DEFINITIONS = [
     allowedActions: ['buy_call', 'sell_call', 'buy_put', 'sell_put'],
     winCondition: (pnl) => pnl > 500,
     winText: '盈利超过 $500',
+    difficulty: 5,
+    tags: ['Butterfly', '精准策略'],
+    checklist: [
+      { label: '至少 3 个不同行权价的腿', check: (c) => {
+        const ks = new Set(c.portfolio.getPositions().filter(p => !p.isStock).map(p => p.strike));
+        return ks.size >= 3;
+      } },
+      { label: '总盈亏 > $500', check: (c) => c.pnl > 500 },
+    ],
   },
 
   // ────────────────────────────────────────────
@@ -644,5 +728,10 @@ const LEVEL_DEFINITIONS = [
     allowedActions: ['buy_call', 'sell_call', 'buy_put', 'sell_put', 'buy_stock', 'sell_stock'],
     winCondition: (pnl) => pnl > 1000,
     winText: '盈利超过 $1000',
+    difficulty: 5,
+    tags: ['综合', '挑战'],
+    checklist: [
+      { label: '总盈亏 > $1000', check: (c) => c.pnl > 1000 },
+    ],
   },
 ];

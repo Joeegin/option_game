@@ -12,21 +12,45 @@ class Portfolio {
   }
 
   /**
-   * Open a new position
-   * @param {object} option - { type: 'call'|'put', strike, optionType, isLong: bool }
-   * @param {number} quantity - Number of contracts (each = 100 shares)
-   * @param {number} premium - Price paid/received per share
-   * @param {boolean} isStock - Whether this is a stock position
+   * Required margin for a naked short option (simplified CBOE-like rule).
+   * Naked call: 20% * underlying + premium - OTM amount (floor: 10% * underlying)
+   * Naked put : 20% * underlying + premium - OTM amount (floor: 10% * strike)
    */
-  openPosition(option, quantity, premium, isStock = false) {
-    const cost = premium * quantity * (isStock ? 1 : 100);
-    const isLong = option.isLong !== false; // default to long
+  _calcShortMargin(option, premium, underlyingPrice) {
+    if (option.type === 'call') {
+      const otm = Math.max(0, option.strike - underlyingPrice);
+      const standard = (0.20 * underlyingPrice + premium - otm) * 100;
+      const floor = (0.10 * underlyingPrice + premium) * 100;
+      return Math.max(standard, floor);
+    } else {
+      const otm = Math.max(0, underlyingPrice - option.strike);
+      const standard = (0.20 * underlyingPrice + premium - otm) * 100;
+      const floor = (0.10 * option.strike + premium) * 100;
+      return Math.max(standard, floor);
+    }
+  }
 
-    // For long positions: pay premium (cost), for short: receive premium
+  openPosition(option, quantity, premium, isStock = false, underlyingPrice = null) {
+    const isLong = option.isLong !== false;
+    const multiplier = isStock ? 1 : 100;
+    const cost = premium * quantity * multiplier;
+
+    // Cash flow at open
     const cashFlow = isLong ? -cost : cost;
 
-    if (this.cash + cashFlow < 0) {
-      return { success: false, error: '资金不足' };
+    // Margin requirement for naked short options
+    let marginHeld = 0;
+    if (!isLong && !isStock && underlyingPrice != null) {
+      marginHeld = this._calcShortMargin(option, premium, underlyingPrice) * quantity;
+    }
+
+    if (this.cash + cashFlow - marginHeld < 0) {
+      return {
+        success: false,
+        error: marginHeld > 0
+          ? `资金不足：裸卖需冻结保证金 $${marginHeld.toFixed(0)}`
+          : '资金不足',
+      };
     }
 
     this.cash += cashFlow;
@@ -41,17 +65,15 @@ class Portfolio {
       isStock,
       openDay: option.openDay || 0,
       openPrice: option.openPrice || 0,
+      marginHeld,
     };
+
+    if (marginHeld > 0) this.cash -= marginHeld;
 
     this.positions.push(position);
     return { success: true, position };
   }
 
-  /**
-   * Close an existing position
-   * @param {number} positionId
-   * @param {number} currentPremium - Current market premium for the option/stock
-   */
   closePosition(positionId, currentPremium) {
     const idx = this.positions.findIndex(p => p.id === positionId);
     if (idx === -1) return { success: false, error: '找不到持仓' };
@@ -59,16 +81,16 @@ class Portfolio {
     const pos = this.positions[idx];
     const multiplier = pos.isStock ? 1 : 100;
 
-    // Close the position: reverse the cash flow from opening
-    // Long: we bought at entry, now sell at current → receive currentPremium
-    // Short: we sold at entry, now buy back at current → pay currentPremium
     if (pos.isLong) {
       this.cash += currentPremium * pos.quantity * multiplier;
     } else {
       this.cash -= currentPremium * pos.quantity * multiplier;
     }
 
-    // Calculate P&L
+    if (pos.marginHeld) {
+      this.cash += pos.marginHeld;
+    }
+
     let pnl;
     if (pos.isLong) {
       pnl = (currentPremium - pos.entryPremium) * pos.quantity * multiplier;
@@ -82,10 +104,6 @@ class Portfolio {
     return { success: true, pnl, position: pos };
   }
 
-  /**
-   * Get mark-to-market P&L for all open positions
-   * @param {function} getCurrentPrice - fn(type, strike) => {bid, ask, mid}
-   */
   getUnrealizedPnL(getCurrentPrice) {
     let totalPnl = 0;
     for (const pos of this.positions) {
@@ -100,30 +118,31 @@ class Portfolio {
     return totalPnl;
   }
 
-  /** Total realized P&L from closed positions */
   getRealizedPnL() {
     return this.closedPositions.reduce((sum, p) => sum + p.pnl, 0);
   }
 
-  /** Total P&L = realized + unrealized */
   getTotalPnL(getCurrentPrice) {
     return this.getRealizedPnL() + this.getUnrealizedPnL(getCurrentPrice);
   }
 
-  /** Portfolio value = cash + unrealized value */
   getPortfolioValue(getCurrentPrice) {
-    return this.cash + this.getUnrealizedPnL(getCurrentPrice);
+    const marginLocked = this.positions.reduce((s, p) => s + (p.marginHeld || 0), 0);
+    return this.cash + marginLocked + this.getUnrealizedPnL(getCurrentPrice);
   }
 
   getPositions() {
     return [...this.positions];
   }
 
+  getClosedPositions() {
+    return [...this.closedPositions];
+  }
+
   getCash() {
     return this.cash;
   }
 
-  /** Count positions by type for level validation */
   getPositionSummary() {
     const summary = { longCalls: 0, shortCalls: 0, longPuts: 0, shortPuts: 0, longStock: 0, shortStock: 0 };
     for (const pos of this.positions) {

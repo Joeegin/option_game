@@ -76,8 +76,12 @@ class PriceChart {
       return;
     }
 
-    const minP = Math.min(...prices) * 0.98;
-    const maxP = Math.max(...prices) * 1.02;
+    const rawMin = Math.min(...prices);
+    const rawMax = Math.max(...prices);
+    // Ensure visible padding even when prices are nearly flat
+    const padAbs = Math.max((rawMax - rawMin) * 0.08, rawMax * 0.01, 0.5);
+    const minP = rawMin - padAbs;
+    const maxP = rawMax + padAbs;
     const rangeP = maxP - minP || 1;
 
     const xScale = i => m.left + (i / Math.max(prices.length - 1, 1)) * plotW;
@@ -156,25 +160,33 @@ class PriceChart {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Trade markers
+    // Trade markers — fan out when multiple share the same day
+    const perDay = {};
     for (const marker of this.tradeMarkers) {
-      const mx = xScale(marker.day);
-      const my = yScale(marker.price);
-      ctx.fillStyle = marker.type === 'buy' ? '#00c853' : '#ff1744';
-      ctx.beginPath();
-      if (marker.type === 'buy') {
-        // Triangle up
-        ctx.moveTo(mx, my - 12);
-        ctx.lineTo(mx - 8, my);
-        ctx.lineTo(mx + 8, my);
-      } else {
-        // Triangle down
-        ctx.moveTo(mx, my + 12);
-        ctx.lineTo(mx - 8, my);
-        ctx.lineTo(mx + 8, my);
-      }
-      ctx.closePath();
-      ctx.fill();
+      const key = marker.day;
+      perDay[key] = perDay[key] || [];
+      perDay[key].push(marker);
+    }
+    for (const key in perDay) {
+      const group = perDay[key];
+      group.forEach((marker, idx) => {
+        const offset = (idx - (group.length - 1) / 2) * 12;
+        const mx = xScale(marker.day) + offset;
+        const my = yScale(marker.price);
+        ctx.fillStyle = marker.type === 'buy' ? '#00c853' : '#ff1744';
+        ctx.beginPath();
+        if (marker.type === 'buy') {
+          ctx.moveTo(mx, my - 12);
+          ctx.lineTo(mx - 8, my);
+          ctx.lineTo(mx + 8, my);
+        } else {
+          ctx.moveTo(mx, my + 12);
+          ctx.lineTo(mx - 8, my);
+          ctx.lineTo(mx + 8, my);
+        }
+        ctx.closePath();
+        ctx.fill();
+      });
     }
 
     ctx.restore();
