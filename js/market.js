@@ -80,12 +80,13 @@ class Market {
     const r = this.riskFreeRate;
     const sigma = this.volatility;
 
-    // Strikes from 70% to 130% of current price, in 2.5% increments
-    const strikes = [];
-    const baseStrike = Math.round(S * 0.7 / 5) * 5;
-    const maxStrike = Math.round(S * 1.3 / 5) * 5;
+    // Adaptive strike step: ~2.5% of underlying, snapped to a clean grid
+    const step = this._strikeStep(S);
+    const baseStrike = Math.max(step, Math.round(S * 0.7 / step) * step);
+    const maxStrike = Math.round(S * 1.3 / step) * step;
 
-    for (let K = baseStrike; K <= maxStrike; K += 5) {
+    const strikes = [];
+    for (let K = baseStrike; K <= maxStrike; K += step) {
       if (K <= 0) continue;
       const callPrice = blackScholes('call', S, K, T, r, sigma);
       const putPrice = blackScholes('put', S, K, T, r, sigma);
@@ -98,11 +99,28 @@ class Market {
         putBid: Math.max(0.01, +(putPrice * 0.97).toFixed(2)),
         putAsk: Math.max(0.02, +(putPrice * 1.03).toFixed(2)),
         putMid: Math.max(0.01, +putPrice.toFixed(2)),
-        isATM: Math.abs(K - Math.round(S / 5) * 5) < 2.5,
+        isATM: Math.abs(K - Math.round(S / step) * step) < step / 2,
       });
     }
 
     return strikes;
+  }
+
+  _strikeStep(S) {
+    if (S < 25) return 1;
+    if (S < 100) return 2.5;
+    if (S < 250) return 5;
+    return 10;
+  }
+
+  /** Bid/ask for stock with a small spread (5 bps each side). */
+  getStockQuote() {
+    const mid = this.currentPrice;
+    return {
+      bid: +(mid * 0.9995).toFixed(2),
+      ask: +(mid * 1.0005).toFixed(2),
+      mid: +mid.toFixed(2),
+    };
   }
 
   /**

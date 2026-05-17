@@ -56,7 +56,13 @@ function blackScholes(type, S, K, T, r, sigma) {
  * @returns {{ delta, gamma, theta, vega, rho }}
  */
 function calculateGreeks(type, S, K, T, r, sigma) {
-  if (T <= 0) T = 0.0001;
+  if (T <= 0) {
+    // At expiration: gamma/theta/vega collapse; delta is a step function
+    let delta;
+    if (type === 'call') delta = S > K ? 1 : (S < K ? 0 : 0.5);
+    else delta = S < K ? -1 : (S > K ? 0 : -0.5);
+    return { delta, gamma: 0, theta: 0, vega: 0, rho: 0 };
+  }
 
   const d1 = (Math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.sqrt(T));
   const d2 = d1 - sigma * Math.sqrt(T);
