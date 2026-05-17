@@ -59,16 +59,65 @@ class UI {
           if (this.onAdvanceDays) this.onAdvanceDays(n);
           break;
         }
+        case 'open-onboarding':
+          this.renderOnboarding(0);
+          break;
+        case 'onboarding-next': {
+          const next = parseInt(target.dataset.page, 10);
+          this.renderOnboarding(next);
+          break;
+        }
+        case 'onboarding-skip':
+          if (typeof Onboarding !== 'undefined') Onboarding.markCompleted();
+          if (this.onSkipOnboarding) this.onSkipOnboarding();
+          break;
+        case 'onboarding-finish':
+          if (typeof Onboarding !== 'undefined') Onboarding.markCompleted();
+          if (this.onFinishOnboarding) this.onFinishOnboarding();
+          break;
       }
     });
+  }
+
+  // ─── Onboarding (Prologue) ───
+
+  renderOnboarding(pageIndex) {
+    if (typeof ONBOARDING_PAGES === 'undefined') return;
+    const page = ONBOARDING_PAGES[pageIndex];
+    if (!page) return;
+    const total = ONBOARDING_PAGES.length;
+    const dots = ONBOARDING_PAGES.map((_, i) => `<span class="onb-dot ${i === pageIndex ? 'active' : ''}"></span>`).join('');
+    const isLast = pageIndex === total - 1;
+
+    this.app.innerHTML = `
+      <div class="onboarding-screen">
+        <div class="onb-card">
+          <div class="onb-header">
+            <div class="onb-icon">${page.icon}</div>
+            <div class="onb-title">${page.title}</div>
+            <div class="onb-step">第 ${pageIndex + 1} 页 / ${total}</div>
+          </div>
+          <div class="onb-content">${page.content}</div>
+          <div class="onb-footer">
+            <div class="onb-dots">${dots}</div>
+            <div class="onb-actions">
+              <button data-action="onboarding-skip" class="onb-skip">跳过</button>
+              ${isLast
+                ? `<button data-action="onboarding-finish" class="onb-finish">🚀 开始第一关</button>`
+                : `<button data-action="onboarding-next" data-page="${pageIndex + 1}" class="onb-next">下一页 →</button>`}
+            </div>
+          </div>
+        </div>
+      </div>`;
   }
 
   // ─── Level Select Screen ───
 
   renderLevelSelect(levels, game) {
     const progress = game.getProgress();
-    let cards = '';
-    levels.forEach(level => {
+    const onbDone = typeof Onboarding !== 'undefined' ? Onboarding.isCompleted() : true;
+
+    const renderCard = (level) => {
       const unlocked = game.isUnlocked(level.id);
       const completed = game.isCompleted(level.id);
       let cls = '';
@@ -77,16 +126,57 @@ class UI {
 
       const stars = '★'.repeat(level.difficulty || 1) + '☆'.repeat(5 - (level.difficulty || 1));
       const tags = (level.tags || []).map(t => `<span class="card-tag">${t}</span>`).join('');
-
       const clickable = unlocked ? `data-action="select-level" data-level="${level.id}"` : '';
-      cards += `
+
+      return `
         <div class="level-card ${cls}" ${clickable}>
           <div class="card-level">${unlocked ? level.id : '🔒'}</div>
           <div class="card-title">${level.shortTitle}</div>
           ${unlocked ? `<div class="card-stars" title="难度">${stars}</div>` : ''}
           ${unlocked && tags ? `<div class="card-tags">${tags}</div>` : ''}
         </div>`;
-    });
+    };
+
+    // Group by phase if game provides it
+    let groupsHtml;
+    if (typeof game.getLevelsByPhase === 'function') {
+      const phases = game.getLevelsByPhase();
+      groupsHtml = phases.map(phase => `
+        <div class="phase-group">
+          <div class="phase-header">
+            <div class="phase-title">${phase.title}</div>
+            <div class="phase-desc">${phase.desc || ''}</div>
+          </div>
+          <div class="level-grid">${phase.levels.map(renderCard).join('')}</div>
+        </div>
+      `).join('');
+    } else {
+      groupsHtml = `<div class="level-grid">${levels.map(renderCard).join('')}</div>`;
+    }
+
+    const prologueBanner = !onbDone
+      ? `
+        <div class="prologue-banner">
+          <div class="pb-left">
+            <div class="pb-icon">📚</div>
+            <div>
+              <div class="pb-title">先学新手序章</div>
+              <div class="pb-desc">4 页互动导引——读完后即可解锁第 1 关</div>
+            </div>
+          </div>
+          <button class="pb-cta" data-action="open-onboarding">开始序章 →</button>
+        </div>`
+      : `
+        <div class="prologue-banner subtle">
+          <div class="pb-left">
+            <div class="pb-icon">✅</div>
+            <div>
+              <div class="pb-title">序章已完成</div>
+              <div class="pb-desc">想重温基础概念？随时可以重新阅读</div>
+            </div>
+          </div>
+          <button class="pb-cta-secondary" data-action="open-onboarding">重温序章</button>
+        </div>`;
 
     this.app.innerHTML = `
       <div class="level-select">
@@ -94,7 +184,8 @@ class UI {
         <p class="subtitle">
           从零开始学习期权交易 · ${progress.completed}/${progress.total} 关已完成
         </p>
-        <div class="level-grid">${cards}</div>
+        ${prologueBanner}
+        ${groupsHtml}
         <div style="margin-top: 24px;">
           <button data-action="reset" style="color: var(--text-muted); font-size: 12px; background: transparent; border-color: transparent;">
             重置进度
