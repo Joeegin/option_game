@@ -1,0 +1,179 @@
+/* Level select screen */
+.level-select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 40px;
+}
+
+.level-select h1 {
+  font-size: 28px;
+  margin-bottom: 8px;
+  color: var(--accent-blue);
+}
+
+.level-select .subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 40px;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  max-width: 900px;
+  width: 100%;
+}
+
+.level-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.level-card:hover {
+  border-color: var(--accent-blue);
+  transform: translateY(-2px);
+}
+
+.level-card.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.level-card.locked:hover {
+  border-color: var(--border-color);
+  transform: none;
+}
+
+.level-card.completed {
+  border-color: var(--accent-green);
+}
+
+.level-card .card-level {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--accent-blue);
+  margin-bottom: 8px;
+}
+
+.level-card.locked .card-level {
+  color: var(--text-muted);
+}
+
+.level-card.completed .card-level {
+  color: var(--accent-green);
+}
+
+.level-card .card-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Option action buttons (within chain row) */
+.action-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.action-btns button {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+
+/* Strategy guide panel */
+.strategy-guide {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.strategy-guide h4 {
+  font-size: 12px;
+  color: var(--accent-yellow);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Price ticker animation */
+.ticker-up {
+  animation: flashGreen 0.5s ease;
+}
+
+.ticker-down {
+  animation: flashRed 0.5s ease;
+}
+
+@keyframes flashGreen {
+  0% { background: rgba(0, 200, 83, 0.3); }
+  100% { background: transparent; }
+}
+
+@keyframes flashRed {
+  0% { background: rgba(255, 23, 68, 0.3); }
+  100% { background: transparent; }
+}
+
+/* Win/Lose modal specifics */
+.win-modal .modal h2 {
+  color: var(--accent-green);
+}
+
+.win-modal .modal .reward {
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--accent-yellow);
+  margin-bottom: 16px;
+}
+
+/* Responsive */
+@media (max-width: 1300px) {
+  .dashboard {
+    grid-template-columns: 300px 1fr 250px;
+  }
+}
+
+@media (max-width: 1050px) {
+  .dashboard {
+    grid-template-columns: 260px 1fr 0px;
+  }
+  .panel:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 750px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+  .panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    max-height: 200px;
+  }
+  .panel:last-child {
+    border-left: none;
+    display: flex;
+  }
+  .knowledge-panel {
+    max-height: 35%;
+  }
+  .level-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

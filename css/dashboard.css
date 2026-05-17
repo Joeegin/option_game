@@ -1,0 +1,641 @@
+/* Top bar */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  min-height: 52px;
+}
+
+.top-bar .level-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-bar .level-badge {
+  background: var(--accent-blue);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.top-bar .stats {
+  display: flex;
+  gap: 24px;
+}
+
+.top-bar .stat-item {
+  text-align: right;
+}
+
+.top-bar .stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.top-bar .stat-value {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Main dashboard grid */
+.dashboard {
+  display: grid;
+  grid-template-columns: 340px 1fr 280px;
+  grid-template-rows: 1fr;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Panel shared styles */
+.panel {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel:last-child {
+  border-right: none;
+  border-left: 1px solid var(--border-color);
+}
+
+.panel-header {
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+/* Options chain table */
+.options-chain {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.options-chain th {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 8px 8px 4px;
+  text-align: right;
+  font-weight: normal;
+}
+
+.options-chain th:first-child {
+  text-align: left;
+}
+
+.options-chain td {
+  padding: 5px 8px;
+  font-size: 13px;
+  text-align: right;
+  border-bottom: 1px solid rgba(42, 46, 58, 0.5);
+  cursor: pointer;
+}
+
+.options-chain td:first-child {
+  text-align: left;
+  font-weight: bold;
+}
+
+.options-chain tr:hover td {
+  background: rgba(68, 138, 255, 0.08);
+}
+
+.options-chain tr.selected td {
+  background: rgba(68, 138, 255, 0.15);
+}
+
+/* Middle area — knowledge on top, chart on bottom */
+.middle-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Knowledge panel — upper portion, main reading area */
+.knowledge-panel {
+  flex: 6;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Chart area — lower, compact */
+.chart-container {
+  flex: 4;
+  position: relative;
+  background: var(--bg-primary);
+  min-height: 150px;
+}
+
+.chart-container canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.objective-badge {
+  background: rgba(255, 215, 64, 0.12);
+  color: var(--accent-yellow);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  border: 1px solid rgba(255, 215, 64, 0.2);
+}
+
+.btn-start-trading {
+  padding: 12px 36px !important;
+  font-size: 15px !important;
+  font-weight: bold !important;
+  background: var(--accent-blue) !important;
+  border-color: var(--accent-blue) !important;
+  color: #fff !important;
+}
+
+.btn-start-trading:hover {
+  background: #3d7be8 !important;
+}
+
+/* Knowledge panel sub-elements */
+.knowledge-panel .kp-header {
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.knowledge-panel .kp-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--text-secondary);
+}
+
+.knowledge-panel .kp-content strong {
+  color: var(--text-primary);
+}
+
+.knowledge-panel .kp-content h4 {
+  color: var(--accent-blue);
+  font-size: 15px;
+  margin: 12px 0 8px;
+}
+
+.knowledge-panel .kp-content h4:first-child {
+  margin-top: 0;
+}
+
+.knowledge-panel .kp-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0;
+}
+
+.knowledge-panel .kp-content li {
+  padding: 2px 0 2px 16px;
+  position: relative;
+}
+
+.knowledge-panel .kp-content li::before {
+  content: ">";
+  position: absolute;
+  left: 0;
+  color: var(--accent-yellow);
+  font-weight: bold;
+}
+
+.knowledge-panel .kp-content .highlight-box {
+  background: rgba(68, 138, 255, 0.1);
+  border: 1px solid rgba(68, 138, 255, 0.25);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: 12px;
+}
+
+.knowledge-panel .kp-content .formula {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  color: var(--accent-yellow);
+  background: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+/* Fixed footer for start button */
+.kp-footer {
+  padding: 10px 18px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+/* Start area in knowledge panel */
+.kp-start-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Strategy guide box during trading */
+.kp-guide-box {
+  margin-bottom: 12px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.kp-guide-box h4 {
+  color: var(--accent-blue);
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+
+.kp-guide-box p {
+  margin-bottom: 8px;
+}
+
+.kp-guide-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0;
+}
+
+.kp-guide-box li {
+  padding: 3px 0 3px 16px;
+  position: relative;
+}
+
+.kp-guide-box li::before {
+  content: ">";
+  position: absolute;
+  left: 0;
+  color: var(--accent-yellow);
+  font-weight: bold;
+}
+
+.kp-guide-box .highlight-box {
+  background: rgba(68, 138, 255, 0.08);
+  border: 1px solid rgba(68, 138, 255, 0.2);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+/* Collapsible tutorial during trading */
+.kp-tutorial-details {
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.kp-tutorial-details summary {
+  cursor: pointer;
+  color: var(--accent-blue);
+  font-size: 14px;
+  font-weight: bold;
+  padding: 6px 0;
+}
+
+.kp-tutorial-details summary:hover {
+  color: #6db3ff;
+}
+
+/* Full tutorial content inside knowledge panel */
+.tutorial-full {
+  line-height: 1.9;
+  font-size: 15px;
+}
+
+.tutorial-full h3 {
+  font-size: 18px;
+  color: var(--accent-blue);
+  margin: 0 0 12px;
+}
+
+.tutorial-full h4 {
+  font-size: 15px;
+  color: var(--accent-yellow);
+  margin: 16px 0 8px;
+}
+
+.tutorial-full p {
+  margin-bottom: 10px;
+}
+
+.tutorial-full ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.tutorial-full li {
+  margin-bottom: 4px;
+}
+
+.tutorial-full table {
+  border-collapse: collapse;
+  margin: 10px 0;
+  width: 100%;
+  font-size: 13px;
+}
+
+.tutorial-full td {
+  padding: 4px 10px;
+  border-bottom: 1px solid rgba(42, 46, 58, 0.4);
+}
+
+.tutorial-full .highlight-box {
+  background: rgba(68, 138, 255, 0.08);
+  border: 1px solid rgba(68, 138, 255, 0.2);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.tutorial-full em {
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+/* Position list */
+.position-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.position-card .pos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.position-card .pos-type {
+  font-weight: bold;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.position-card .pos-type.long {
+  background: rgba(0, 200, 83, 0.2);
+  color: var(--accent-green);
+}
+
+.position-card .pos-type.short {
+  background: rgba(255, 23, 68, 0.2);
+  color: var(--accent-red);
+}
+
+.position-card .pos-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.position-card .close-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 4px;
+  font-size: 11px;
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+  background: transparent;
+}
+
+.position-card .close-btn:hover {
+  background: rgba(255, 23, 68, 0.15);
+}
+
+/* Trading panel */
+.trade-panel {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+}
+
+.trade-panel .trade-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.trade-panel .trade-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.trade-panel input[type="number"] {
+  width: 80px;
+  text-align: center;
+}
+
+.trade-panel label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Tutorial overlay */
+.tutorial-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.tutorial-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 40px 48px;
+  max-width: 720px;
+  width: 92%;
+  max-height: 85vh;
+  overflow-y: auto;
+  text-align: center;
+}
+
+.tutorial-card h1 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: var(--accent-blue);
+}
+
+.tutorial-card .level-num {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.tutorial-card .tutorial-text {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  text-align: left;
+  margin-bottom: 12px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  padding: 16px 20px;
+  border: 1px solid var(--border-color);
+}
+
+.tutorial-card .tutorial-text h3 {
+  font-size: 17px;
+  margin-bottom: 10px;
+}
+
+.tutorial-card .tutorial-text h4 {
+  font-size: 14px;
+  margin: 12px 0 4px;
+}
+
+.tutorial-card .tutorial-text p {
+  margin-bottom: 8px;
+}
+
+.tutorial-card .tutorial-text ul {
+  padding-left: 18px;
+  margin: 6px 0;
+}
+
+.tutorial-card .tutorial-text li {
+  margin-bottom: 3px;
+}
+
+.tutorial-card .tutorial-text table {
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.tutorial-card .tutorial-text td {
+  padding: 3px 10px;
+  border-bottom: 1px solid rgba(42, 46, 58, 0.4);
+}
+
+.tutorial-card .objective {
+  display: inline-block;
+  background: rgba(255, 215, 64, 0.15);
+  color: var(--accent-yellow);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.tutorial-card button {
+  padding: 12px 40px;
+  font-size: 15px;
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #fff;
+  font-weight: bold;
+}
+
+.tutorial-card button:hover {
+  background: #3d7be8;
+}
+
+/* Days remaining indicator */
+.day-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.day-progress {
+  width: 100px;
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.day-progress-fill {
+  height: 100%;
+  background: var(--accent-blue);
+  transition: width 0.3s ease;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-size: 13px;
+  z-index: 3000;
+  animation: fadeIn 0.3s ease;
+  max-width: 350px;
+}
+
+.toast.success {
+  background: rgba(0, 200, 83, 0.2);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+}
+
+.toast.error {
+  background: rgba(255, 23, 68, 0.2);
+  border: 1px solid var(--accent-red);
+  color: var(--accent-red);
+}
+
+.toast.info {
+  background: rgba(68, 138, 255, 0.2);
+  border: 1px solid var(--accent-blue);
+  color: var(--accent-blue);
+}
