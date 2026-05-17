@@ -26,6 +26,10 @@ class App {
     this.ui.onResetGame = () => this._resetGame();
     this.ui.onSkipOnboarding = () => this._showLevelSelect();
     this.ui.onFinishOnboarding = () => this._startLevel(1);
+    this.ui.onRedrawChart = () => {
+      // Defer one tick to let CSS finish revealing the pane
+      setTimeout(() => this._updateChart(), 30);
+    };
   }
 
   _setupKeyboardShortcuts() {

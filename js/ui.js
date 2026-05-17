@@ -75,8 +75,53 @@ class UI {
           if (typeof Onboarding !== 'undefined') Onboarding.markCompleted();
           if (this.onFinishOnboarding) this.onFinishOnboarding();
           break;
+        case 'switch-chart-tab': {
+          const tab = target.dataset.tab;
+          this._switchChartTab(tab);
+          break;
+        }
       }
     });
+  }
+
+  _switchChartTab(tab) {
+    const tabs = document.querySelectorAll('.chart-tab');
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    const pricePane = document.getElementById('chart-pane-price');
+    const payoffPane = document.getElementById('chart-pane-payoff');
+    if (!pricePane || !payoffPane) return;
+    if (tab === 'price') {
+      pricePane.hidden = false;
+      pricePane.classList.add('active');
+      payoffPane.hidden = true;
+      payoffPane.classList.remove('active');
+      // Trigger chart redraw because canvas was hidden
+      if (this.onRedrawChart) this.onRedrawChart();
+    } else {
+      pricePane.hidden = true;
+      pricePane.classList.remove('active');
+      payoffPane.hidden = false;
+      payoffPane.classList.add('active');
+      // Re-render payoff in case positions changed while hidden
+      this._refreshPayoffMount();
+    }
+  }
+
+  _refreshPayoffMount() {
+    const mount = document.getElementById('payoff-mount');
+    if (!mount) return;
+    const portfolio = window.app && window.app.portfolio;
+    const market = window.app && window.app.market;
+    if (!portfolio || !market) return;
+    const positions = portfolio.getPositions();
+    if (positions.length === 0) {
+      mount.innerHTML = `<div class="payoff-empty">开仓后这里会显示你的盈亏曲线 📊</div>`;
+      return;
+    }
+    if (typeof PayoffDiagram === 'undefined') return;
+    const S = market.getCurrentPrice();
+    const T = Math.max(market.getDaysRemaining() / 365, 0.001);
+    PayoffDiagram.render(mount, positions, S, market.volatility, T);
   }
 
   // ─── Onboarding (Prologue) ───
@@ -232,8 +277,61 @@ class UI {
             <div class="kp-content" id="kp-content"></div>
             <div class="kp-footer" id="kp-footer" style="display: none;"></div>
           </div>
-          <div class="chart-container" id="chart-container">
-            <canvas id="price-chart"></canvas>
+          <div class="chart-area" id="chart-area">
+            <div class="chart-tabs">
+              <button class="chart-tab active" data-action="switch-chart-tab" data-tab="price">📈 价格走势</button>
+              <button class="chart-tab" data-action="switch-chart-tab" data-tab="payoff">💰 到期盈亏</button>
+            </div>
+            <div class="chart-pane chart-pane-price active" id="chart-pane-price">
+              <canvas id="price-chart"></canvas>
+            </div>
+            <div class="chart-pane chart-pane-payoff" id="chart-pane-payoff" hidden>
+              <div class="payoff-toolbar">
+                <div class="payoff-legend">
+                  <span class="lg-item"><i class="lg-line lg-expiry"></i>到期盈亏</span>
+                  <span class="lg-item"><i class="lg-line lg-now"></i>当前盈亏</span>
+                  <span class="lg-item"><i class="lg-tick lg-be"></i>盈亏平衡 BE</span>
+                  <span class="lg-item"><i class="lg-tick lg-price"></i>现价</span>
+                </div>
+                <span class="payoff-help-trigger" tabindex="0">
+                  ❓ 如何看图
+                  <div class="payoff-help-tooltip" role="tooltip">
+                    <div class="ht-section">
+                      <div class="ht-title">📐 坐标</div>
+                      <div><strong>X 轴</strong>: 到期日时的股价</div>
+                      <div><strong>Y 轴</strong>: 你的盈亏 (美元)</div>
+                    </div>
+                    <div class="ht-section">
+                      <div class="ht-title">🎨 线条含义</div>
+                      <div><span class="ht-swatch lg-expiry"></span><strong>蓝实线</strong> = <strong>到期</strong>盈亏曲线 (合约到期日的盈亏)</div>
+                      <div><span class="ht-swatch lg-now"></span><strong>灰虚线</strong> = <strong>当前</strong>盈亏 (现在平仓的盈亏，含时间价值)</div>
+                      <div><span class="ht-swatch lg-be"></span><strong>黄竖虚线</strong> = <strong>盈亏平衡点</strong> (这里盈亏为 0)</div>
+                      <div><span class="ht-swatch lg-price"></span><strong>蓝竖虚线</strong> = <strong>当前股价</strong> (现在的位置)</div>
+                    </div>
+                    <div class="ht-section">
+                      <div class="ht-title">🔍 怎么解读</div>
+                      <div>1. 找到当前股价的竖虚线</div>
+                      <div>2. 看它和蓝实线交点的 Y 值 → 到期盈亏估算</div>
+                      <div>3. 看它和灰虚线交点 → 现在平仓的盈亏</div>
+                      <div>4. 蓝实线上方 0 线以上 = 盈利区</div>
+                    </div>
+                    <div class="ht-section">
+                      <div class="ht-title">📊 形状对照表</div>
+                      <div><strong>↗</strong> 单买 Call (线性盈利，无上限)</div>
+                      <div><strong>↘</strong> 单买 Put (线性盈利，跌得越多越赚)</div>
+                      <div><strong>┌─┐</strong> Bull Call Spread (有顶有底)</div>
+                      <div><strong>V</strong> Straddle (中间最差，两侧赚)</div>
+                      <div><strong>U</strong> Strangle (中间平底亏，两侧赚)</div>
+                      <div><strong>▲</strong> Butterfly (中间尖顶，两侧归零)</div>
+                      <div><strong>┏━┓</strong> Iron Condor (中间宽顶赚，两侧封顶亏)</div>
+                    </div>
+                  </div>
+                </span>
+              </div>
+              <div id="payoff-mount" class="payoff-mount">
+                <div class="payoff-empty">开仓后这里会显示你的盈亏曲线 📊</div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="panel" id="panel-positions">
@@ -490,38 +588,20 @@ class UI {
 
       // Build win-progress checklist
       const progressHtml = this._buildWinProgress(level, game, market);
-      // Build payoff diagram
-      const payoffHtml = this._buildPayoffSection(level, market, game);
 
       content.innerHTML = `
         <div class="kp-guide-box">${guide}</div>
         ${progressHtml}
-        ${payoffHtml}
+        <div class="kp-hint">💡 切换到下方 <strong>"💰 到期盈亏"</strong> 标签可查看你的盈亏曲线</div>
         <details class="kp-tutorial-details">
           <summary>完整教程</summary>
           <div class="tutorial-full">${level.tutorial}</div>
         </details>`;
 
-      // Render payoff after DOM injection
-      const payoffMount = document.getElementById('payoff-mount');
-      if (payoffMount && typeof PayoffDiagram !== 'undefined') {
-        const portfolio = window.app && window.app.portfolio;
-        if (portfolio) {
-          PayoffDiagram.render(payoffMount, portfolio.getPositions(), S, sigma, T);
-        }
-      }
       footer.style.display = 'none';
     }
-  }
-
-  _buildPayoffSection(level, market, game) {
-    const portfolio = window.app && window.app.portfolio;
-    if (!portfolio || portfolio.getPositions().length === 0) return '';
-    return `
-      <div class="payoff-section">
-        <div class="payoff-title">📈 到期盈亏图（基于当前持仓）</div>
-        <div id="payoff-mount"></div>
-      </div>`;
+    // Always refresh the Payoff mount (Tab pane lives outside knowledge-panel now)
+    this._refreshPayoffMount();
   }
 
   _buildWinProgress(level, game, market) {
